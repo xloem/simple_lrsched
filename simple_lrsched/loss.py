@@ -29,7 +29,7 @@ class Loss:
     def zero_grad(self):
         '''Reset the accumulated loss. [should this happen automatically?]'''
         self.accumulated_loss = [0] * len(self.optimizer.param_groups)
-        self.accumulated_validation = [None] * len(self.optimizer.param_groups)
+        self.accumulated_test = [None] * len(self.optimizer.param_groups)
     @classmethod
     def _accum_marked(cls, loss):
         for (marked_for_accum, group_idx) in cls._marked_for_accumulation:
