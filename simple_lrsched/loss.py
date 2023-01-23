@@ -1,5 +1,4 @@
 import collections
-import torch
 
 class Loss:
     '''
@@ -30,6 +29,7 @@ class Loss:
     def zero_grad(self):
         '''Reset the accumulated loss. [should this happen automatically?]'''
         self.accumulated_loss = [0] * len(self.optimizer.param_groups)
+        self.accumulated_validation = [None] * len(self.optimizer.param_groups)
     @classmethod
     def _accum_marked(cls, loss):
         for (marked_for_accum, group_idx) in cls._marked_for_accumulation:
@@ -42,12 +42,25 @@ class Loss:
         del self.mark_accum_hook_groups
         del self.by_optimizer[self.optimizer]
 
+# hook torch.Tensor.backward to stash loss
+import torch
 _torch_backward = torch.Tensor.backward
-def _wrapped_backward(self_is_loss, *params, **kwparams):
+def _wrapped_backward(loss, *params, **kwparams):
+    assert not len(Loss._marked_for_accumulation)
     # call backward(), which calls hooks to mark for accumulation
-    result = _torch_backward(self_is_loss, *params, **kwparams)
+    result = _torch_backward(loss, *params, **kwparams)
     # update any marked objects
-    Loss._accum_marked(self_is_loss)
+    Loss._accum_marked(loss)
     # return to caller
     return result
 torch.Tensor.backward = _wrapped_backward
+
+# hook transformers.Trainer.log to maybe get access to evaluation loss
+import transformers
+_transformers_log = transformers.Trainer.log
+def _wrapped_log(trainer, logs):
+    result = _transformers_log(trainer, logs)
+    import pdb; pdb.set_trace()
+    return result
+transformers.Trainer.log = _wrapped_log
+

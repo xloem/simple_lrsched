@@ -1,4 +1,4 @@
-import torch.optim
+import torch, torch.optim
 
 from .loss import Loss
 
